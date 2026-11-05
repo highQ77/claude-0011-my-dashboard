@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的儀表板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   設計 tokens
+   ========================================================= */
+:root{
+  --bg:#e7e9ee;
+  --glass:rgba(255,255,255,.64);
+  --glass-hi:rgba(255,255,255,.78);
+  --glass-border:rgba(255,255,255,.75);
+  --tile:rgba(255,255,255,.55);
+  --tile-hover:rgba(255,255,255,.8);
+  --solid:#ffffff;
+  --ink:#111827; --ink2:#374151; --muted:#6b7280; --faint:#9ca3af;
+  --line:rgba(17,24,39,.08);
+  --accent:#2563eb; --accent-ink:#ffffff; --accent-soft:rgba(37,99,235,.12);
+  --good:#15803d; --warn:#b45309; --bad:#c0262d;
+  --veil:linear-gradient(180deg,rgba(248,250,252,.30),rgba(248,250,252,.12) 40%,rgba(248,250,252,.30));
+  --shadow:inset 0 1px 0 rgba(255,255,255,.7),0 1px 2px rgba(15,23,42,.06),0 12px 32px -12px rgba(15,23,42,.22);
+  --radius:20px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1014;
+    --glass:rgba(16,19,25,.60); --glass-hi:rgba(22,26,33,.72); --glass-border:rgba(255,255,255,.09);
+    --tile:rgba(255,255,255,.05); --tile-hover:rgba(255,255,255,.1); --solid:#1a1e25;
+    --ink:#e8ebef; --ink2:#b7bfc9; --muted:#8a94a1; --faint:#5f6874;
+    --line:rgba(255,255,255,.07);
+    --accent:#8ab4ff; --accent-ink:#0d1014; --accent-soft:rgba(138,180,255,.14);
+    --good:#5fd38d; --warn:#f2c15b; --bad:#ff8a8a;
+    --veil:linear-gradient(180deg,rgba(5,7,10,.55),rgba(5,7,10,.35) 40%,rgba(5,7,10,.6));
+    --shadow:inset 0 1px 0 rgba(255,255,255,.05),0 16px 40px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1014;
+  --glass:rgba(16,19,25,.60); --glass-hi:rgba(22,26,33,.72); --glass-border:rgba(255,255,255,.09);
+  --tile:rgba(255,255,255,.05); --tile-hover:rgba(255,255,255,.1); --solid:#1a1e25;
+  --ink:#e8ebef; --ink2:#b7bfc9; --muted:#8a94a1; --faint:#5f6874;
+  --line:rgba(255,255,255,.07);
+  --accent:#8ab4ff; --accent-ink:#0d1014; --accent-soft:rgba(138,180,255,.14);
+  --good:#5fd38d; --warn:#f2c15b; --bad:#ff8a8a;
+  --veil:linear-gradient(180deg,rgba(5,7,10,.55),rgba(5,7,10,.35) 40%,rgba(5,7,10,.6));
+  --shadow:inset 0 1px 0 rgba(255,255,255,.05),0 16px 40px -12px rgba(0,0,0,.6);
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :root{--glass:rgba(255,255,255,.9)}
+  :root[data-theme="dark"]{--glass:rgba(16,19,25,.92)}
+}
+
+/* =========================================================
+   基礎
+   ========================================================= */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg);color:var(--ink);
+  font:15px/1.6 "Inter",-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  letter-spacing:.005em;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+a{color:inherit;text-decoration:none;transition:color .15s}
+a:hover{color:var(--accent)}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum","cv11"}
+.muted{color:var(--muted)}.ink2{color:var(--ink2)}
+.err{color:var(--bad);font-size:13px}
+::selection{background:var(--accent-soft)}
+*{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+
+/* 固定背景照片 */
+#bg{position:fixed;inset:0;z-index:-2;background:var(--bg) center/cover no-repeat;opacity:0;transition:opacity 1s ease;filter:saturate(.85)}
+#bg.ready{opacity:1}
+#veil{position:fixed;inset:0;z-index:-1;background:var(--veil);pointer-events:none}
+
+/* 毛玻璃表面 */
+.glass{
+  background:var(--glass);border:1px solid var(--glass-border);box-shadow:var(--shadow);
+  -webkit-backdrop-filter:blur(24px) saturate(140%);backdrop-filter:blur(24px) saturate(140%);
+}
+.icon{display:inline-flex;width:16px;height:16px;flex:none}
+.icon svg{width:100%;height:100%}
+
+/* 按鈕 / 輸入框 */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:12px;cursor:pointer;
+  background:var(--tile);border:1px solid var(--glass-border);color:var(--ink2);font-size:14px;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transition:background .15s,color .15s,transform .1s;
+}
+.btn:hover{background:var(--tile-hover);color:var(--ink)}
+.btn:active{transform:scale(.97)}
+.btn.sm{height:28px;padding:0 10px;font-size:12.5px;border-radius:9px}
+.btn.primary{background:var(--accent);border-color:transparent;color:var(--accent-ink);font-weight:500}
+.btn.primary:hover{filter:brightness(1.07)}
+.field{
+  height:36px;padding:0 12px;border-radius:12px;background:var(--tile);border:1px solid var(--glass-border);
+  outline:none;transition:border-color .15s,background .15s;min-width:0;
+}
+.field:focus{border-color:var(--accent);background:var(--tile-hover)}
+.field::placeholder{color:var(--faint)}
+
+/* =========================================================
+   版面
+   ========================================================= */
+.wrap{max-width:1320px;margin:0 auto;padding:28px 20px 56px}
+header{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:14px 18px;border-radius:var(--radius);margin-bottom:14px}
+.greet{flex:1 1 220px;min-width:0}
+.greet h1{font-size:20px;line-height:1.3;margin:0;font-weight:600;letter-spacing:-.01em}
+.greet p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.search{position:relative;flex:1 1 300px;max-width:480px}
+.search .icon{position:absolute;left:14px;top:10px;color:var(--faint)}
+.search input{width:100%;padding-left:40px;border-radius:999px}
+.hbtns{display:flex;gap:8px}
+
+.bookmarks{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;align-items:center}
+.bm{
+  display:flex;align-items:center;gap:8px;height:36px;padding:0 14px 0 6px;border-radius:999px;font-size:14px;color:var(--ink2);
+  transition:background .15s,transform .15s;
+}
+.bm:hover{background:var(--glass-hi);color:var(--ink);transform:translateY(-1px)}
+.bm .ic{width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:600;font-size:12px}
+.bm .x{display:none;border:0;background:var(--bad);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;line-height:18px;padding:0;cursor:pointer;margin-left:2px}
+.bookmarks.editing .bm .x{display:inline-block}
+.bm-form{display:none;gap:6px}
+.bookmarks.editing .bm-form{display:flex;flex-wrap:wrap}
+.bm-form .field{width:150px;height:36px}
+
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:18px}
+.card{border-radius:var(--radius);padding:20px 22px;min-width:0;display:flex;flex-direction:column}
+.s4{grid-column:span 4}.s6{grid-column:span 6}.s8{grid-column:span 8}
+@media (max-width:1100px){.s4{grid-column:span 6}.s6,.s8{grid-column:span 12}}
+@media (max-width:700px){.s4,.s6,.s8{grid-column:span 12}.wrap{padding:16px 16px 40px}.card{padding:18px}}
+
+.card-h{display:flex;align-items:center;gap:10px;margin:0 0 16px;min-height:28px}
+.card-h h2{font-size:15px;font-weight:600;margin:0;letter-spacing:.01em;white-space:nowrap}
+.card-h .chip{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:none}
+.card-h .meta{margin-left:auto;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px;min-width:0}
+.label{font-size:12.5px;color:var(--muted);margin:0 0 6px;letter-spacing:.02em}
+
+.list{list-style:none;margin:0;padding:0}
+.list li{padding:10px 0;border-top:1px solid var(--line);display:flex;gap:12px;align-items:baseline}
+.list li:first-child{border-top:0;padding-top:2px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.scroll{max-height:330px;overflow:auto;margin-right:-8px;padding-right:8px;
+  -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(180deg,#000 calc(100% - 28px),transparent);padding-bottom:20px}
+.skeleton{height:12px;border-radius:6px;background:var(--tile);margin:10px 0;animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.45}}
+
+/* 時間 */
+.clock{font-size:64px;font-weight:300;letter-spacing:-.035em;line-height:1;margin-top:4px}
+.clock small{font-size:22px;color:var(--faint);margin-left:6px;letter-spacing:0;font-weight:400}
+.date{font-size:15px;color:var(--ink2);margin-top:10px}
+.kv{display:grid;grid-template-columns:44px 1fr;gap:8px 12px;margin:18px 0 0;padding-top:16px;border-top:1px solid var(--line);font-size:14px}
+.kv dt{color:var(--muted);font-size:12.5px;padding-top:1px}
+.kv dd{margin:0;color:var(--ink2)}
+.kv b{color:var(--ink);font-weight:600}
+.zones{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:auto;padding-top:18px}
+.zone{background:var(--tile);border-radius:12px;padding:9px 12px}
+.zone b{display:block;font-size:18px;font-weight:500;letter-spacing:-.01em}
+.zone span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+
+/* 天氣 */
+.wx-top{display:grid;grid-template-columns:minmax(220px,auto) 1fr;gap:20px 28px;align-items:center}
+@media (max-width:760px){.wx-top{grid-template-columns:1fr}}
+.wx-now{display:flex;align-items:center;gap:16px}
+.wx-now .emo{font-size:60px;line-height:1;filter:drop-shadow(0 4px 10px rgba(0,0,0,.12))}
+.wx-now .t{font-size:56px;font-weight:300;line-height:1;letter-spacing:-.03em}
+.wx-now .d{color:var(--ink2);margin-top:6px}
+.wx-now .r{color:var(--muted);font-size:13px}
+.wx-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:520px){.wx-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--tile);border-radius:12px;padding:10px 12px;min-width:0}
+.stat span{display:block;font-size:12px;color:var(--muted)}
+.stat b{font-weight:500;font-size:15px;white-space:nowrap}
+.stat em{font-style:normal;font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex:none}
+.loc{position:relative;display:flex;gap:6px;align-items:center}
+.loc .name{color:var(--ink2);font-weight:500;white-space:nowrap}
+.loc .field{width:130px;height:28px;font-size:12.5px;border-radius:9px}
+.loc .drop{position:absolute;top:calc(100% + 6px);right:0;z-index:5;background:var(--solid);border:1px solid var(--line);border-radius:12px;min-width:240px;box-shadow:0 16px 40px rgba(0,0,0,.2);display:none;overflow:hidden;padding:4px}
+.loc .drop button{display:block;width:100%;text-align:left;border:0;background:none;padding:8px 12px;cursor:pointer;border-radius:8px;font-size:14px}
+.loc .drop button:hover{background:var(--accent-soft)}
+.chart{position:relative;margin-top:22px}
+.chart svg{display:block;overflow:visible}
+.chart .tip{position:absolute;pointer-events:none;background:var(--solid);color:var(--ink);border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.15);
+  font-size:12.5px;padding:6px 10px;border-radius:9px;white-space:nowrap;transform:translate(-50%,calc(-100% - 10px));display:none}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:16px}
+.day{text-align:center;padding:10px 4px 12px;border-radius:12px;background:var(--tile);font-size:12.5px;transition:background .15s}
+.day:hover{background:var(--tile-hover)}
+.day .w{color:var(--muted)}
+.day .e{font-size:24px;display:block;margin:4px 0 2px;line-height:1.3}
+.day .tt{font-size:13px}.day .tt b{font-weight:600}
+.day .rng{height:4px;border-radius:2px;background:var(--line);margin:6px 8px 6px;position:relative}
+.day .rng i{position:absolute;top:0;bottom:0;border-radius:2px;background:linear-gradient(90deg,#60a5fa,#f59e0b)}
+.day .pp{color:var(--muted);font-size:11.5px}
+
+/* 金融 */
+.fin li{align-items:center}
+.fin .nm{flex:1;min-width:0}
+.fin .nm small{color:var(--muted);font-size:12px;margin-left:6px}
+.fin .v{font-weight:500}
+.chg{display:inline-flex;justify-content:flex-end;min-width:78px;font-size:13px;font-weight:500;padding:2px 8px;border-radius:7px}
+.chg.up{color:var(--good);background:color-mix(in srgb,var(--good) 12%,transparent)}
+.chg.down{color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+
+/* 番茄鐘 */
+.pomo{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.modes{display:inline-flex;padding:3px;border-radius:12px;background:var(--tile);gap:2px}
+.modes button{border:0;background:none;padding:5px 12px;border-radius:9px;cursor:pointer;color:var(--muted);font-size:13px;transition:all .15s}
+.modes button.on{background:var(--glass-hi);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.ring{position:relative;width:168px;height:168px}
+.ring svg{transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:8}
+.ring .track{stroke:var(--line)}
+.ring .prog{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .6s linear}
+.ring .time{position:absolute;inset:0;display:grid;place-items:center;font-size:38px;font-weight:300;letter-spacing:-.02em}
+.pomo .ctl{display:flex;gap:8px}
+
+/* 待辦 */
+.todo-form{display:flex;gap:8px;margin-bottom:10px}
+.todo-form .field{flex:1}
+.todo li{align-items:center;padding:9px 0}
+.todo label{flex:1;display:flex;gap:10px;align-items:center;cursor:pointer;min-width:0;word-break:break-word}
+.todo input[type=checkbox]{appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:6px;border:1.5px solid var(--faint);flex:none;display:grid;place-items:center;cursor:pointer;margin:0;transition:all .15s}
+.todo input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
+.todo input[type=checkbox]:checked::after{content:"";width:9px;height:5px;border:2px solid var(--accent-ink);border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+.todo li.done label span{text-decoration:line-through;color:var(--faint)}
+.todo .del{border:0;background:none;color:var(--faint);cursor:pointer;font-size:18px;opacity:0;transition:opacity .15s;padding:0 4px}
+.todo li:hover .del,.todo .del:focus-visible{opacity:1}
+.todo .del:hover{color:var(--bad)}
+.empty{color:var(--muted);text-align:center;padding:28px 0;font-size:14px}
+
+/* 假期 */
+.hol li{align-items:center}
+.hol .dt{min-width:92px;font-weight:500}
+.hol .nm{flex:1;color:var(--ink2)}
+.pill{font-size:12px;color:var(--accent);background:var(--accent-soft);padding:2px 9px;border-radius:999px;white-space:nowrap}
+.yprog{margin-top:auto;padding-top:16px}
+.yprog .bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:8px}
+.yprog .bar i{display:block;height:100%;border-radius:4px;background:var(--accent)}
+
+/* 地震 */
+.mag{min-width:44px;text-align:center;font-weight:600;font-size:13px;border-radius:8px;padding:3px 0;background:var(--tile);color:var(--ink2)}
+.mag.m5{background:rgba(245,158,11,.2);color:var(--warn)}
+.mag.m6{background:rgba(220,38,38,.18);color:var(--bad)}
+.eq li{align-items:center}
+.eq a{flex:1;min-width:0;font-size:14px}
+.eq small{display:block;color:var(--muted);font-size:12px}
+.sec{font-size:12.5px;color:var(--muted);margin:14px 0 4px;font-weight:500}
+.sec:first-child{margin-top:0}
+
+/* HN / 維基 */
+.hn li{align-items:flex-start}
+.hn .rk{min-width:20px;color:var(--faint);font-size:13px;padding-top:1px}
+.hn .tt{flex:1;min-width:0;font-size:14.5px;line-height:1.5}
+.hn .tt small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.wiki-img{display:flex;gap:14px;margin-bottom:6px;align-items:flex-start}
+.wiki-img img{width:132px;height:96px;object-fit:cover;border-radius:12px;flex:none;background:var(--tile)}
+.wiki-img p{margin:0;font-size:13.5px;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:4;line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.otd li{font-size:14px}
+.otd .yr{min-width:46px;color:var(--accent);font-weight:600}
+
+/* 地圖 */
+.s12{grid-column:span 12}
+.map-ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:12px}
+.map-ctl form{display:flex;gap:8px;flex:1 1 340px;min-width:0}
+.map-ctl form .field{flex:1}
+.zoom{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.zoom input[type=range]{width:160px;accent-color:var(--accent)}
+.zoom b{min-width:22px;text-align:right;color:var(--ink);font-weight:500}
+.map-frame{position:relative;height:440px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--tile)}
+.map-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;filter:grayscale(1);transition:filter .4s ease}
+.map-frame:hover iframe,.map-frame:focus-within iframe{filter:none}
+.map-now{font-size:12.5px;color:var(--muted);margin-top:8px}
+@media (max-width:700px){.map-frame{height:320px}}
+
+/* 頁尾 */
+footer{display:flex;justify-content:center;margin-top:32px}
+footer span{font-size:12.5px;color:var(--ink2);padding:6px 16px;border-radius:999px;letter-spacing:.04em}
+footer b{font-weight:600;color:var(--ink)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="bg"></div><div id="veil"></div>
+<div class="wrap">
+  <header class="glass">
+    <div class="greet"><h1 id="greet">你好</h1><p id="subgreet"></p></div>
+    <form class="search" action="https://www.google.com/search" method="get" target="_blank">
+      <span class="icon" data-icon="search"></span>
+      <input class="field" name="q" placeholder="搜尋 Google…" autocomplete="off">
+    </form>
+    <div class="hbtns">
+      <button class="btn" id="bgBtn" title="換一張背景照片"><span class="icon" data-icon="image"></span>換背景</button>
+      <button class="btn" id="themeBtn" title="切換主題"></button>
+    </div>
+  </header>
+
+  <div class="bookmarks" id="bookmarks"></div>
+
+  <main class="grid">
+    <!-- 時間 + 農曆 -->
+    <section class="card glass s4">
+      <div class="card-h"><span class="chip" data-icon="clock"></span><h2>時間</h2></div>
+      <div class="clock num" id="clock">--:--</div>
+      <div class="date" id="date"></div>
+      <dl class="kv" id="cal"></dl>
+      <div class="zones" id="zones"></div>
+    </section>
+
+    <!-- 天氣 -->
+    <section class="card glass s8">
+      <div class="card-h"><span class="chip" data-icon="weather"></span><h2>天氣</h2>
+        <div class="meta loc">
+          <span class="name" id="locName">台北市</span>
+          <input class="field" id="locInput" placeholder="搜尋城市…">
+          <button class="btn sm" id="geoBtn" title="使用目前位置"><span class="icon" data-icon="pin"></span></button>
+          <div class="drop" id="locDrop"></div>
+        </div>
+      </div>
+      <div id="wx"><div class="skeleton" style="width:40%"></div><div class="skeleton" style="width:70%"></div></div>
+      <div class="chart" id="chart"></div>
+      <div class="days" id="days"></div>
+    </section>
+
+    <!-- 待辦 -->
+    <section class="card glass s4">
+      <div class="card-h"><span class="chip" data-icon="check"></span><h2>待辦事項</h2><span class="meta"><button class="btn sm" id="clearDone">清除已完成</button></span></div>
+      <form class="todo-form" id="todoForm"><input class="field" id="todoInput" placeholder="新增待辦，按 Enter"><button class="btn primary">新增</button></form>
+      <ul class="list todo scroll" id="todos"></ul>
+    </section>
+
+    <!-- 假期 -->
+    <section class="card glass s4">
+      <div class="card-h"><span class="chip" data-icon="flag"></span><h2>國定假日</h2></div>
+      <ul class="list hol" id="holidays"><li><div class="skeleton" style="width:100%"></div></li></ul>
+      <div class="yprog" id="yprog"></div>
+    </section>
+
+    <!-- 地震 -->
+    <section class="card glass s4">
+      <div class="card-h"><span class="chip" data-icon="quake"></span><h2>地震</h2><span class="meta" id="eqMeta">近 7 天</span></div>
+      <div class="scroll" id="eq"><div class="skeleton"></div><div class="skeleton"></div></div>
+    </section>
+
+    <!-- 匯率 -->
+    <section class="card glass s4">
+      <div class="card-h"><span class="chip" data-icon="fx"></span><h2>匯率</h2><span class="meta" id="fxMeta">兌新台幣</span></div>
+      <ul class="list fin" id="fx"><li><div class="skeleton" style="width:100%"></div></li></ul>
+    </section>
+
+    <!-- 加密貨幣 -->
+    <section class="card glass s4">
+      <div class="card-h"><span class="chip" data-icon="coin"></span><h2>加密貨幣</h2><span class="meta" id="cryptoMeta">USDT</span></div>
+      <ul class="list fin" id="crypto"><li><div class="skeleton" style="width:100%"></div></li></ul>
+    </section>
+
+    <!-- 番茄鐘 -->
+    <section class="card glass s4">
+      <div class="card-h"><span class="chip" data-icon="timer"></span><h2>番茄鐘</h2><span class="meta" id="pomoCount"></span></div>
+      <div class="pomo">
+        <div class="modes" id="pomoModes">
+          <button class="on" data-m="25">專注 25</button><button data-m="5">短休 5</button><button data-m="15">長休 15</button>
+        </div>
+        <div class="ring">
+          <svg width="168" height="168" viewBox="0 0 168 168"><circle class="track" cx="84" cy="84" r="76"/><circle class="prog" id="pomoRing" cx="84" cy="84" r="76"/></svg>
+          <div class="time num" id="pomoTime">25:00</div>
+        </div>
+        <div class="ctl"><button class="btn primary" id="pomoStart">開始</button><button class="btn" id="pomoReset">重設</button></div>
+      </div>
+    </section>
+
+    <!-- 地圖 -->
+    <section class="card glass s12">
+      <div class="card-h"><span class="chip" data-icon="map"></span><h2>地圖</h2><span class="meta">Google Maps</span></div>
+      <div class="map-ctl">
+        <form id="mapForm"><input class="field" id="mapQ" placeholder="地址、地名或經緯度（例：台北101、25.0339,121.5645）"><button class="btn primary">前往</button></form>
+        <label class="zoom">縮放 <button type="button" class="btn sm" id="zOut" aria-label="縮小">−</button><input type="range" id="mapZ" min="1" max="21" step="1"><button type="button" class="btn sm" id="zIn" aria-label="放大">＋</button><b class="num" id="mapZv"></b></label>
+        <button type="button" class="btn" id="mapSync"><span class="icon" data-icon="pin"></span>天氣城市</button>
+      </div>
+      <div class="map-frame"><iframe id="mapFrame" title="Google 地圖" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>
+      <div class="map-now" id="mapNow"></div>
+    </section>
+
+    <!-- Hacker News -->
+    <section class="card glass s6">
+      <div class="card-h"><span class="chip" data-icon="news"></span><h2>Hacker News 熱門</h2><span class="meta" id="hnMeta"></span></div>
+      <ul class="list hn scroll" id="hn"><li><div class="skeleton" style="width:100%"></div></li></ul>
+    </section>
+
+    <!-- 維基 -->
+    <section class="card glass s6">
+      <div class="card-h"><span class="chip" data-icon="book"></span><h2>維基百科・今日</h2><span class="meta" id="wikiMeta"></span></div>
+      <div class="scroll" id="wiki"><div class="skeleton"></div><div class="skeleton"></div></div>
+    </section>
+  </main>
+  <footer><span class="glass">powered by <b>Claude</b> × <b>William77</b></span></footer>
+</div>
+
+<script>
+/* ---------- 共用工具 ---------- */
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '#';
+const pad = n => String(n).padStart(2, '0');
+const hhmm = d => pad(d.getHours()) + ':' + pad(d.getMinutes());
+const stamp = id => { $(id).textContent = '更新於 ' + hhmm(new Date()); };
+async function getJSON(url, opts = {}){
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 12000);
+  try{
+    const r = await fetch(url, { ...opts, signal: ctl.signal });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+const WEEK = ['日','一','二','三','四','五','六'];
+
+/* ---------- 線條圖示 ---------- */
+const ICONS = {
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  weather:'<path d="M12 2v2M4.9 4.9l1.4 1.4M20 12h2M19.1 4.9l-1.4 1.4M16 12.6A4 4 0 0 0 8.4 10"/><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6z"/>',
+  fx:'<path d="M7 7h13l-4-4M17 17H4l4 4"/>',
+  coin:'<circle cx="12" cy="12" r="9"/><path d="M9.5 8h4a2 2 0 0 1 0 4h-4zM9.5 12h4.5a2 2 0 0 1 0 4H9.5zM9.5 7v10M12 6v2M12 16v2"/>',
+  timer:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>',
+  check:'<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/>',
+  flag:'<path d="M5 21V4M5 4h12l-2 4 2 4H5"/>',
+  quake:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+  news:'<path d="M4 5h12v14a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2zM16 9h4v10a2 2 0 0 1-2 2"/><path d="M8 9h4M8 13h4M8 17h2"/>',
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
+  pin:'<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  pencil:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  map:'<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  auto:'<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/>'
+};
+const svg = (n, s = 16) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
+document.querySelectorAll('[data-icon]').forEach(el => el.innerHTML = svg(el.dataset.icon));
+
+/* ---------- 主題 ---------- */
+const THEMES = ['auto','light','dark'], THEME_LABEL = {auto:'自動', light:'淺色', dark:'深色'}, THEME_ICON = {auto:'auto', light:'sun', dark:'moon'};
+let theme = store.get('theme', 'auto');
+function applyTheme(){
+  if(theme === 'auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', theme);
+  $('themeBtn').innerHTML = `<span class="icon">${svg(THEME_ICON[theme])}</span>${THEME_LABEL[theme]}`;
+}
+$('themeBtn').onclick = () => { theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; store.set('theme', theme); applyTheme(); };
+applyTheme();
+
+/* ---------- 背景照片（Picsum，免 key；預設每天一張） ---------- */
+function setBg(seed){
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const w = Math.min(2560, Math.round(screen.width * dpr)), h = Math.min(1600, Math.round(screen.height * dpr));
+  const img = new Image();
+  img.onload = () => { const bg = $('bg'); bg.style.backgroundImage = `url("${img.src}")`; bg.classList.add('ready'); };
+  img.onerror = () => $('bg').classList.add('ready');
+  img.src = `https://picsum.photos/seed/${encodeURIComponent(seed)}/${w}/${h}`;
+}
+const todaySeed = () => { const d = new Date(); return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`; };
+let bgSeed = store.get('bgSeed', null);
+if(!bgSeed || bgSeed.day !== todaySeed()) bgSeed = { day: todaySeed(), seed: todaySeed() };
+setBg(bgSeed.seed);
+$('bgBtn').onclick = () => {
+  bgSeed = { day: todaySeed(), seed: Math.random().toString(36).slice(2, 10) };
+  store.set('bgSeed', bgSeed); $('bg').classList.remove('ready'); setTimeout(() => setBg(bgSeed.seed), 300);
+};
+
+/* ---------- 書籤 ---------- */
+let bookmarks = store.get('bookmarks', [
+  {n:'Google', u:'https://www.google.com'}, {n:'YouTube', u:'https://www.youtube.com'},
+  {n:'Gmail', u:'https://mail.google.com'}, {n:'GitHub', u:'https://github.com'},
+  {n:'維基百科', u:'https://zh.wikipedia.org'}
+]);
+function renderBookmarks(){
+  const box = $('bookmarks'), editing = box.classList.contains('editing');
+  box.innerHTML = bookmarks.map((b, i) =>
+    `<a class="bm glass" href="${esc(safeUrl(b.u))}" target="_blank" rel="noopener"><span class="ic">${esc([...b.n][0] || '?')}</span>${esc(b.n)}<button class="x" data-i="${i}" title="刪除">×</button></a>`
+  ).join('') +
+  `<form class="bm-form" id="bmForm"><input class="field" id="bmName" placeholder="名稱" required><input class="field" id="bmUrl" placeholder="https://…" required><button class="btn primary">加入</button></form>
+   <button class="btn" id="bmEdit"><span class="icon">${svg('pencil')}</span>${editing ? '完成' : '編輯'}</button>`;
+  box.querySelectorAll('.x').forEach(x => x.onclick = e => {
+    e.preventDefault(); bookmarks.splice(+x.dataset.i, 1); store.set('bookmarks', bookmarks); renderBookmarks();
+  });
+  $('bmEdit').onclick = () => { box.classList.toggle('editing'); renderBookmarks(); };
+  $('bmForm').onsubmit = e => {
+    e.preventDefault();
+    let u = $('bmUrl').value.trim(); if(!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    bookmarks.push({n:$('bmName').value.trim(), u}); store.set('bookmarks', bookmarks); renderBookmarks();
+  };
+}
+renderBookmarks();
+
+/* ---------- 時間 & 世界時鐘 ---------- */
+const ZONES = [['東京','Asia/Tokyo'],['倫敦','Europe/London'],['紐約','America/New_York'],['舊金山','America/Los_Angeles'],['雪梨','Australia/Sydney'],['巴黎','Europe/Paris']];
+const zoneFmt = ZONES.map(([n, z]) => [n, new Intl.DateTimeFormat('zh-TW', {timeZone:z, hour:'2-digit', minute:'2-digit', hour12:false}),
+                                           new Intl.DateTimeFormat('zh-TW', {timeZone:z, month:'numeric', day:'numeric'})]);
+let lastDay = '', lastMin = -1;
+function tick(){
+  const d = new Date();
+  $('clock').innerHTML = `${hhmm(d)}<small>${pad(d.getSeconds())}</small>`;
+  if(d.getMinutes() !== lastMin){
+    lastMin = d.getMinutes();
+    $('date').textContent = `${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日・星期${WEEK[d.getDay()]}`;
+    $('zones').innerHTML = zoneFmt.map(([n, f, g]) => `<div class="zone"><b class="num">${f.format(d)}</b><span>${n}・${g.format(d)}</span></div>`).join('');
+    const h = d.getHours();
+    $('greet').textContent = h < 5 ? '夜深了，早點休息' : h < 11 ? '早安' : h < 14 ? '午安' : h < 18 ? '午後好' : '晚上好';
+    $('subgreet').textContent = h < 5 ? '放下螢幕，明天再繼續吧。' : h < 11 ? '新的一天，從一杯水開始。' : h < 14 ? '記得吃午餐、起來走走。' : h < 18 ? '休息一下，伸展肩頸。' : '辛苦了，好好放鬆。';
+  }
+  const key = d.toDateString();
+  if(key !== lastDay){ lastDay = key; renderCalendar(); if(window._booted){ loadWiki(); loadHolidays(); } }
+  pomoTick();
+}
+
+/* ---------- 農曆 / 節氣 / 月相 ---------- */
+const DAY_CN = ['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十','十一','十二','十三','十四','十五','十六','十七','十八','十九','二十','廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
+const ZODIAC = {子:'鼠',丑:'牛',寅:'虎',卯:'兔',辰:'龍',巳:'蛇',午:'馬',未:'羊',申:'猴',酉:'雞',戌:'狗',亥:'豬'};
+function lunar(d){
+  try{
+    const p = new Intl.DateTimeFormat('zh-TW-u-ca-chinese', {year:'numeric', month:'long', day:'numeric'}).formatToParts(d);
+    const get = t => (p.find(x => x.type === t) || {}).value || '';
+    const yn = get('yearName'), day = parseInt(get('day'), 10), z = ZODIAC[yn.slice(-1)];
+    return `<b>${get('month')}${DAY_CN[day - 1] || get('day')}</b>・${yn ? yn + '年' : ''}${z ? '（' + z + '）' : ''}`;
+  }catch{ return '此瀏覽器不支援農曆'; }
+}
+const TERMS = ['春分','清明','穀雨','立夏','小滿','芒種','夏至','小暑','大暑','立秋','處暑','白露','秋分','寒露','霜降','立冬','小雪','大雪','冬至','小寒','大寒','立春','雨水','驚蟄'];
+function sunLon(ms){ // 低精度太陽黃經（誤差約 ±1 小時）
+  const n = ms / 86400000 + 2440587.5 - 2451545, r = Math.PI / 180;
+  const L = 280.460 + 0.9856474 * n, g = (357.528 + 0.9856003 * n) * r;
+  return (((L + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) % 360) + 360) % 360;
+}
+function solarTerm(now){
+  const idx = Math.floor(sunLon(now) / 15);
+  let t = now; while(Math.floor(sunLon(t) / 15) === idx) t += 86400000;
+  t -= 86400000; while(Math.floor(sunLon(t) / 15) === idx) t += 3600000;
+  return { cur: TERMS[idx], next: TERMS[(idx + 1) % 24], at: new Date(t) };
+}
+function moon(now){
+  const SYN = 29.530588853, ref = Date.UTC(2000, 0, 6, 18, 14);
+  const age = ((((now - ref) / 86400000) % SYN) + SYN) % SYN;
+  const names = [['新月','🌑'],['眉月','🌒'],['上弦月','🌓'],['盈凸月','🌔'],['滿月','🌕'],['虧凸月','🌖'],['下弦月','🌗'],['殘月','🌘']];
+  const [name, emo] = names[Math.floor(((age / SYN) * 8 + 0.5)) % 8];
+  const illum = Math.round((1 - Math.cos(2 * Math.PI * age / SYN)) / 2 * 100);
+  return { name, emo, illum, toFull: Math.round(((SYN / 2 - age) + SYN) % SYN) };
+}
+function renderCalendar(){
+  const now = Date.now(), d = new Date(now), st = solarTerm(now), m = moon(now);
+  const days = Math.round((new Date(st.at).setHours(0,0,0,0) - new Date(now).setHours(0,0,0,0)) / 86400000);
+  $('cal').innerHTML = `
+    <dt>農曆</dt><dd>${lunar(d)}</dd>
+    <dt>節氣</dt><dd>${st.cur}・<b>${st.next}</b> ${st.at.getMonth()+1}/${st.at.getDate()}${days > 0 ? `（${days} 天後）` : '（今天）'}</dd>
+    <dt>月相</dt><dd>${m.emo} <b>${m.name}</b>・亮度 ${m.illum}%${m.name === '滿月' ? '' : `・${m.toFull} 天後滿月`}</dd>`;
+  const y = d.getFullYear(), start = new Date(y, 0, 1), doy = Math.floor((d - start) / 86400000) + 1;
+  const total = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 366 : 365, pct = doy / total * 100;
+  $('yprog').innerHTML = `<div class="row"><span class="label" style="margin:0">${y} 年進度</span><span class="num ink2" style="font-size:13px">第 ${doy} 天・${pct.toFixed(1)}%</span></div><div class="bar"><i style="width:${pct}%"></i></div>`;
+}
+
+/* ---------- 國定假日 ---------- */
+async function loadHolidays(){
+  const today = new Date(), y = today.getFullYear();
+  const todayKey = `${y}${pad(today.getMonth()+1)}${pad(today.getDate())}`;
+  try{
+    const lists = await Promise.all([y, y + 1].map(yr =>
+      getJSON(`https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${yr}.json`).catch(() => [])));
+    const items = lists.flat().filter(x => x.isHoliday && x.description && x.date >= todayKey);
+    const merged = [];
+    for(const x of items){
+      const last = merged[merged.length - 1];
+      if(last && last.description === x.description) last.end = x.date; else merged.push({...x, end: x.date});
+    }
+    const fmt = s => `${+s.slice(4,6)}/${+s.slice(6,8)}`;
+    const diff = s => Math.round((new Date(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6,8)) - new Date(y, today.getMonth(), today.getDate())) / 86400000);
+    $('holidays').innerHTML = merged.slice(0, 5).map(h => {
+      const dd = diff(h.date);
+      return `<li><span class="dt num">${fmt(h.date)}${h.end !== h.date ? '–' + fmt(h.end) : ''}</span><span class="nm">${esc(h.description)}</span><span class="pill num">${dd === 0 ? '今天' : dd + ' 天後'}</span></li>`;
+    }).join('') || '<li class="muted">查無資料</li>';
+  }catch{ $('holidays').innerHTML = '<li class="err">載入失敗</li>'; }
+}
+
+/* ---------- 天氣 ---------- */
+const WMO = {0:['晴','☀️','🌙'],1:['大致晴朗','🌤','🌙'],2:['多雲','⛅','☁️'],3:['陰天','☁️','☁️'],45:['霧','🌫'],48:['霧凇','🌫'],
+  51:['毛毛雨','🌦'],53:['毛毛雨','🌦'],55:['濃毛毛雨','🌧'],56:['凍毛毛雨','🌧'],57:['凍毛毛雨','🌧'],
+  61:['小雨','🌦'],63:['中雨','🌧'],65:['大雨','🌧'],66:['凍雨','🌧'],67:['凍雨','🌧'],
+  71:['小雪','🌨'],73:['中雪','🌨'],75:['大雪','❄️'],77:['雪粒','🌨'],80:['陣雨','🌦'],81:['陣雨','🌧'],82:['強陣雨','⛈'],
+  85:['陣雪','🌨'],86:['強陣雪','❄️'],95:['雷雨','⛈'],96:['雷雨夾冰雹','⛈'],99:['強雷雨夾冰雹','⛈']};
+const wmo = (c, day = 1) => { const w = WMO[c] || ['未知','❔']; return { text: w[0], emo: (!day && w[2]) || w[1] }; };
+const aqiLevel = v => v == null ? ['—','var(--faint)'] : v <= 50 ? ['良好','var(--good)'] : v <= 100 ? ['普通','var(--warn)'] : v <= 150 ? ['敏感族群不健康','var(--warn)'] : v <= 200 ? ['不健康','var(--bad)'] : v <= 300 ? ['非常不健康','var(--bad)'] : ['危害','var(--bad)'];
+const uvLevel = v => v == null ? ['—','var(--faint)'] : v < 3 ? ['低','var(--good)'] : v < 6 ? ['中','var(--warn)'] : v < 8 ? ['高','var(--warn)'] : v < 11 ? ['過量','var(--bad)'] : ['危險','var(--bad)'];
+let loc = store.get('loc', { name:'台北市', lat:25.0330, lon:121.5654 });
+let hourly = [];
+async function loadWeather(){
+  $('locName').textContent = loc.name;
+  const q = `latitude=${loc.lat}&longitude=${loc.lon}&timezone=auto`;
+  try{
+    const [w, a] = await Promise.all([
+      getJSON(`https://api.open-meteo.com/v1/forecast?${q}&forecast_days=7` +
+        `&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day,precipitation` +
+        `&hourly=temperature_2m,precipitation_probability,weather_code` +
+        `&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset,precipitation_probability_max`),
+      getJSON(`https://air-quality-api.open-meteo.com/v1/air-quality?${q}&current=us_aqi,pm2_5,pm10,uv_index`).catch(() => null)
+    ]);
+    const c = w.current, dl = w.daily, now = wmo(c.weather_code, c.is_day), aq = (a && a.current) || {};
+    const [aqT, aqC] = aqiLevel(aq.us_aqi), uvV = aq.uv_index ?? dl.uv_index_max[0], [uvT, uvC] = uvLevel(uvV);
+    const t = s => s.slice(11, 16), r = v => v != null ? Math.round(v) : '—';
+    $('wx').innerHTML = `
+      <div class="wx-top">
+        <div class="wx-now"><span class="emo">${now.emo}</span>
+          <div><div class="t num">${Math.round(c.temperature_2m)}°</div>
+          <div class="d">${now.text}・體感 ${Math.round(c.apparent_temperature)}°</div>
+          <div class="r num">${Math.round(dl.temperature_2m_min[0])}° – ${Math.round(dl.temperature_2m_max[0])}°・降雨 ${dl.precipitation_probability_max[0] ?? '—'}%</div></div>
+        </div>
+        <div class="wx-stats">
+          <div class="stat"><span>空氣品質 AQI</span><b class="num">${r(aq.us_aqi)}</b><em><i class="dot" style="background:${aqC}"></i>${aqT}</em></div>
+          <div class="stat"><span>PM2.5 / PM10</span><b class="num">${r(aq.pm2_5)} / ${r(aq.pm10)}</b><em>μg/m³</em></div>
+          <div class="stat"><span>紫外線</span><b class="num">${uvV != null ? uvV.toFixed(1) : '—'}</b><em><i class="dot" style="background:${uvC}"></i>${uvT}</em></div>
+          <div class="stat"><span>濕度</span><b class="num">${c.relative_humidity_2m}%</b><em>相對濕度</em></div>
+          <div class="stat"><span>風速</span><b class="num">${Math.round(c.wind_speed_10m)}</b><em>km/h</em></div>
+          <div class="stat"><span>日出 / 日落</span><b class="num">${t(dl.sunrise[0])}</b><em>日落 ${t(dl.sunset[0])}</em></div>
+        </div>
+      </div>`;
+    const nowHour = c.time.slice(0, 13);
+    let i0 = w.hourly.time.findIndex(x => x.slice(0, 13) >= nowHour); if(i0 < 0) i0 = 0;
+    hourly = w.hourly.time.slice(i0, i0 + 25).map((x, k) => ({ h: x.slice(11, 13), v: w.hourly.temperature_2m[i0 + k], p: w.hourly.precipitation_probability[i0 + k], c: w.hourly.weather_code[i0 + k] }));
+    drawChart();
+    const lo = Math.min(...dl.temperature_2m_min), hi = Math.max(...dl.temperature_2m_max), span = Math.max(hi - lo, 1);
+    $('days').innerHTML = dl.time.map((d, i) => {
+      const dt = new Date(d + 'T00:00'), x = wmo(dl.weather_code[i]), mn = dl.temperature_2m_min[i], mx = dl.temperature_2m_max[i];
+      return `<div class="day" title="${x.text}"><div class="w">${i === 0 ? '今天' : '週' + WEEK[dt.getDay()]}</div><span class="e">${x.emo}</span>
+        <div class="tt num"><b>${Math.round(mx)}°</b> <span class="muted">${Math.round(mn)}°</span></div>
+        <div class="rng"><i style="left:${(mn - lo) / span * 100}%;right:${(hi - mx) / span * 100}%"></i></div>
+        <div class="pp num">降雨 ${dl.precipitation_probability_max[i] ?? '—'}%</div></div>`;
+    }).join('');
+  }catch{ $('wx').innerHTML = '<span class="err">天氣載入失敗，稍後自動重試</span>'; }
+}
+function smooth(pts){ // Catmull-Rom → Bézier
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for(let i = 0; i < pts.length - 1; i++){
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    d += `C${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(1)},${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(1)} ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(1)},${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+function drawChart(){
+  const box = $('chart'); if(!hourly.length){ box.innerHTML = ''; return; }
+  const W = Math.max(box.clientWidth, 280), H = 140, L = 34, R = 8, T = 22, B = 26;
+  const vs = hourly.map(d => d.v), lo = Math.floor(Math.min(...vs)) - 1, hi = Math.ceil(Math.max(...vs)) + 1;
+  const x = i => L + i * (W - L - R) / (hourly.length - 1), y = v => T + (hi - v) * (H - T - B) / (hi - lo);
+  const pts = hourly.map((d, i) => [x(i), y(d.v)]), line = smooth(pts);
+  const ticks = [lo, Math.round((lo + hi) / 2), hi];
+  const iMax = vs.indexOf(Math.max(...vs)), iMin = vs.indexOf(Math.min(...vs));
+  box.innerHTML = `<div class="label">未來 24 小時氣溫</div>
+  <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="未來 24 小時氣溫折線圖">
+    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".22"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+    ${ticks.map(t => `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/>
+      <text x="${L - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${t}°</text>`).join('')}
+    ${hourly.map((d, i) => i % 3 === 0 ? `<text x="${x(i)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">${i === 0 ? '現在' : d.h + ':00'}</text>` : '').join('')}
+    <path d="${line}L${x(hourly.length - 1)},${H - B}L${x(0)},${H - B}Z" fill="url(#ag)"/>
+    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+    ${[iMax, iMin].map(i => `<circle cx="${x(i)}" cy="${y(vs[i])}" r="4" fill="var(--accent)" stroke="var(--solid)" stroke-width="2"/>
+      <text x="${x(i)}" y="${y(vs[i]) + (i === iMax ? -10 : 18)}" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--ink2)">${Math.round(vs[i])}°</text>`).join('')}
+    <g id="cross" style="display:none"><line id="crossL" y1="${T - 6}" y2="${H - B}" stroke="var(--faint)" stroke-dasharray="3 3"/>
+      <circle id="crossC" r="5" fill="var(--accent)" stroke="var(--solid)" stroke-width="2"/></g>
+    <rect id="hit" x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent"/>
+  </svg><div class="tip num" id="tip"></div>`;
+  const hit = box.querySelector('#hit'), cross = box.querySelector('#cross'), tip = box.querySelector('#tip'), sv = box.querySelector('svg');
+  const step = (W - L - R) / (hourly.length - 1);
+  hit.onmousemove = e => {
+    const r = sv.getBoundingClientRect();
+    const i = Math.max(0, Math.min(hourly.length - 1, Math.round((e.clientX - r.left - L) / step)));
+    const d = hourly[i], cx = x(i), cy = y(d.v);
+    cross.style.display = '';
+    box.querySelector('#crossL').setAttribute('x1', cx); box.querySelector('#crossL').setAttribute('x2', cx);
+    box.querySelector('#crossC').setAttribute('cx', cx); box.querySelector('#crossC').setAttribute('cy', cy);
+    tip.style.display = 'block'; tip.style.left = Math.max(70, Math.min(W - 70, cx)) + 'px'; tip.style.top = (cy + sv.offsetTop) + 'px';
+    tip.textContent = `${i === 0 ? '現在' : d.h + ':00'}　${wmo(d.c).emo} ${d.v.toFixed(1)}°　降雨 ${d.p ?? '—'}%`;
+  };
+  hit.onmouseleave = () => { cross.style.display = 'none'; tip.style.display = 'none'; };
+}
+let rT; window.addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(drawChart, 150); });
+
+// 城市搜尋
+let sT;
+$('locInput').addEventListener('input', e => {
+  clearTimeout(sT); const q = e.target.value.trim(), drop = $('locDrop');
+  if(!q){ drop.style.display = 'none'; return; }
+  sT = setTimeout(async () => {
+    try{
+      const r = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=zh&format=json`);
+      const res = r.results || [];
+      drop.innerHTML = res.length ? res.map((c, i) => `<button data-i="${i}">${esc(c.name)} <span class="muted" style="font-size:12px">${esc([c.admin1, c.country].filter(Boolean).join('・'))}</span></button>`).join('') : '<div class="muted" style="padding:8px 12px">找不到</div>';
+      drop.style.display = 'block';
+      drop.querySelectorAll('button').forEach(b => b.onclick = () => {
+        const c = res[+b.dataset.i]; loc = { name: c.name, lat: c.latitude, lon: c.longitude };
+        store.set('loc', loc); followLoc(); drop.style.display = 'none'; $('locInput').value = ''; loadWeather();
+      });
+    }catch{ drop.innerHTML = '<div class="err" style="padding:8px 12px">搜尋失敗</div>'; drop.style.display = 'block'; }
+  }, 350);
+});
+document.addEventListener('click', e => { if(!e.target.closest('.loc')) $('locDrop').style.display = 'none'; });
+$('geoBtn').onclick = () => {
+  if(!navigator.geolocation) return alert('此瀏覽器不支援定位');
+  navigator.geolocation.getCurrentPosition(p => {
+    loc = { name:'目前位置', lat:+p.coords.latitude.toFixed(4), lon:+p.coords.longitude.toFixed(4) }; store.set('loc', loc); followLoc(); loadWeather();
+  }, () => alert('無法取得位置（可能被拒絕權限）'));
+};
+
+/* ---------- 匯率 ---------- */
+const FX = [['USD','美元',1],['JPY','日圓',100],['EUR','歐元',1],['CNY','人民幣',1],['HKD','港幣',1],['KRW','韓元',1000],['GBP','英鎊',1]];
+async function loadFx(){
+  try{
+    const r = await getJSON('https://open.er-api.com/v6/latest/TWD');
+    $('fx').innerHTML = FX.map(([c, n, u]) => {
+      const v = u / r.rates[c];
+      return `<li><span class="nm">${u > 1 ? u + ' ' : ''}${n}<small>${c}</small></span><b class="v num">${v.toFixed(v < 10 ? 3 : 2)}</b></li>`;
+    }).join('');
+    $('fxMeta').textContent = '兌新台幣・' + new Date(r.time_last_update_unix * 1000).toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'});
+  }catch{ $('fx').innerHTML = '<li class="err">匯率載入失敗</li>'; }
+}
+
+/* ---------- 加密貨幣 ---------- */
+const COINS = [['BTC','比特幣'],['ETH','以太幣'],['SOL','Solana'],['BNB','BNB'],['XRP','XRP'],['DOGE','狗狗幣']];
+async function loadCrypto(){
+  const sym = encodeURIComponent(JSON.stringify(COINS.map(c => c[0] + 'USDT')));
+  let data;
+  for(const host of ['https://data-api.binance.vision', 'https://api.binance.com']){
+    try{ data = await getJSON(`${host}/api/v3/ticker/24hr?symbols=${sym}`); break; }catch{}
+  }
+  if(!data){ $('crypto').innerHTML = '<li class="err">載入失敗（部分地區可能無法連線 Binance）</li>'; return; }
+  const by = Object.fromEntries(data.map(d => [d.symbol, d]));
+  $('crypto').innerHTML = COINS.map(([s, n]) => {
+    const d = by[s + 'USDT']; if(!d) return '';
+    const p = +d.lastPrice, ch = +d.priceChangePercent, up = ch >= 0;
+    return `<li><span class="nm">${n}<small>${s}</small></span>
+      <b class="v num">${p.toLocaleString('en-US', {maximumFractionDigits: p < 1 ? 4 : p < 100 ? 2 : 0})}</b>
+      <span class="chg num ${up ? 'up' : 'down'}">${up ? '+' : '−'}${Math.abs(ch).toFixed(2)}%</span></li>`;
+  }).join('');
+  $('cryptoMeta').textContent = 'USDT・' + hhmm(new Date());
+}
+
+/* ---------- 地震 ---------- */
+async function loadQuakes(){
+  try{
+    const r = await getJSON('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.geojson');
+    const f = r.features.map(x => ({ m: x.properties.mag, place: x.properties.place, t: new Date(x.properties.time), url: x.properties.url,
+      lon: x.geometry.coordinates[0], lat: x.geometry.coordinates[1], depth: x.geometry.coordinates[2] }));
+    const tw = f.filter(q => q.lat >= 21 && q.lat <= 26.5 && q.lon >= 119 && q.lon <= 123.5).slice(0, 6);
+    const big = f.filter(q => q.m >= 5).slice(0, 6);
+    const fmt = d => `${d.getMonth()+1}/${d.getDate()} ${hhmm(d)}`;
+    const li = q => `<li><span class="mag num ${q.m >= 6 ? 'm6' : q.m >= 5 ? 'm5' : ''}">${q.m.toFixed(1)}</span>
+      <a href="${esc(safeUrl(q.url))}" target="_blank" rel="noopener">${esc(q.place || '未知')}<small class="num">${fmt(q.t)}・深度 ${Math.round(q.depth)} km</small></a></li>`;
+    $('eq').innerHTML = `<div class="sec">台灣附近・M2.5+</div><ul class="list eq">${tw.map(li).join('') || '<li class="muted">近 7 天無紀錄</li>'}</ul>
+      <div class="sec">全球・M5.0+</div><ul class="list eq">${big.map(li).join('') || '<li class="muted">無</li>'}</ul>`;
+    $('eqMeta').textContent = '近 7 天・USGS';
+  }catch{ $('eq').innerHTML = '<span class="err">地震資料載入失敗</span>'; }
+}
+
+/* ---------- Hacker News ---------- */
+async function loadHN(){
+  try{
+    const ids = (await getJSON('https://hacker-news.firebaseio.com/v0/topstories.json')).slice(0, 12);
+    const items = await Promise.all(ids.map(id => getJSON(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).catch(() => null)));
+    $('hn').innerHTML = items.filter(Boolean).map((it, k) => {
+      const url = it.url || `https://news.ycombinator.com/item?id=${it.id}`;
+      let host = ''; try{ host = new URL(url).hostname.replace(/^www\./, ''); }catch{}
+      return `<li><span class="rk num">${k + 1}</span><span class="tt"><a href="${esc(safeUrl(url))}" target="_blank" rel="noopener">${esc(it.title)}</a>
+        <small class="num">${esc(host)}・${it.score} 分・<a href="https://news.ycombinator.com/item?id=${it.id}" target="_blank" rel="noopener">${it.descendants || 0} 則留言</a></small></span></li>`;
+    }).join('');
+    stamp('hnMeta');
+  }catch{ $('hn').innerHTML = '<li class="err">Hacker News 載入失敗</li>'; }
+}
+
+/* ---------- 維基百科 ---------- */
+async function loadWiki(){
+  const d = new Date(), Y = d.getFullYear(), M = pad(d.getMonth() + 1), D = pad(d.getDate());
+  const H = { headers: { 'Accept-Language': 'zh-TW' } };
+  try{
+    const f = await getJSON(`https://zh.wikipedia.org/api/rest_v1/feed/featured/${Y}/${M}/${D}`, H);
+    let otd = f.onthisday, lang = 'zh';
+    if(!otd || !otd.length){ try{ otd = (await getJSON(`https://zh.wikipedia.org/api/rest_v1/feed/onthisday/selected/${M}/${D}`, H)).selected; }catch{} }
+    if(!otd || !otd.length){ try{ otd = (await getJSON(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/selected/${M}/${D}`)).selected; lang = 'en'; }catch{} }
+    const strip = s => String(s || '').replace(/<[^>]+>/g, '');
+    let html = '';
+    if(f.image && f.image.thumbnail){
+      const desc = (f.image.description && f.image.description.text) || f.image.title || '';
+      html += `<div class="sec">每日圖片</div><div class="wiki-img"><a href="${esc(safeUrl(f.image.file_page))}" target="_blank" rel="noopener"><img src="${esc(safeUrl(f.image.thumbnail.source))}" alt="" loading="lazy"></a><p>${esc(strip(desc))}</p></div>`;
+    }
+    if(f.news && f.news.length) html += `<div class="sec">新聞動態</div><ul class="list">${f.news.slice(0, 4).map(n => `<li style="font-size:14px">${esc(strip(n.story))}</li>`).join('')}</ul>`;
+    if(otd && otd.length){
+      html += `<div class="sec">歷史上的今天${lang === 'en' ? '（英文）' : ''}</div><ul class="list otd">${otd.slice(0, 8).map(e => {
+        const pg = e.pages && e.pages[0], link = pg && pg.content_urls && pg.content_urls.desktop.page;
+        return `<li><span class="yr num">${e.year}</span><span style="flex:1">${link ? `<a href="${esc(safeUrl(link))}" target="_blank" rel="noopener">${esc(e.text)}</a>` : esc(e.text)}</span></li>`;
+      }).join('')}</ul>`;
+    }
+    if(f.mostread && f.mostread.articles){
+      html += `<div class="sec">昨日熱門條目</div><ul class="list">${f.mostread.articles.filter(a => !/^(Special|Wikipedia|特殊):/.test(a.title)).slice(0, 6).map(a =>
+        `<li style="font-size:14px"><a href="${esc(safeUrl(a.content_urls.desktop.page))}" target="_blank" rel="noopener" style="flex:1">${esc(a.titles ? a.titles.normalized : a.title)}</a><span class="muted num" style="font-size:12px">${(a.views || 0).toLocaleString()} 次</span></li>`).join('')}</ul>`;
+    }
+    $('wiki').innerHTML = html || '<div class="empty">今日無資料</div>';
+    stamp('wikiMeta');
+  }catch{ $('wiki').innerHTML = '<span class="err">維基百科載入失敗</span>'; }
+}
+
+/* ---------- 待辦 ---------- */
+let todos = store.get('todos', []);
+function renderTodos(){
+  $('todos').innerHTML = todos.map((t, i) => `<li class="${t.done ? 'done' : ''}"><label><input type="checkbox" data-i="${i}" ${t.done ? 'checked' : ''}><span>${esc(t.text)}</span></label><button class="del" data-i="${i}" title="刪除" aria-label="刪除">×</button></li>`).join('')
+    || '<li class="empty" style="display:block;border:0">目前沒有待辦，享受這一刻 ☕</li>';
+  $('todos').querySelectorAll('input').forEach(c => c.onchange = () => { todos[+c.dataset.i].done = c.checked; store.set('todos', todos); renderTodos(); });
+  $('todos').querySelectorAll('.del').forEach(b => b.onclick = () => { todos.splice(+b.dataset.i, 1); store.set('todos', todos); renderTodos(); });
+}
+$('todoForm').onsubmit = e => { e.preventDefault(); const v = $('todoInput').value.trim(); if(!v) return; todos.push({text:v, done:false}); $('todoInput').value = ''; store.set('todos', todos); renderTodos(); };
+$('clearDone').onclick = () => { todos = todos.filter(t => !t.done); store.set('todos', todos); renderTodos(); };
+renderTodos();
+
+/* ---------- 番茄鐘 ---------- */
+const CIRC = 2 * Math.PI * 76;
+$('pomoRing').style.strokeDasharray = CIRC;
+let pomo = { mins: 25, left: 25 * 60, end: null };
+function pomoCount(){ const c = store.get('pomo', {}); return c.day === new Date().toDateString() ? c.n : 0; }
+function pomoRender(){
+  const s = Math.max(0, Math.ceil(pomo.left));
+  $('pomoTime').textContent = `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
+  $('pomoRing').style.strokeDashoffset = CIRC * (1 - s / (pomo.mins * 60));
+  $('pomoStart').textContent = pomo.end ? '暫停' : (s < pomo.mins * 60 && s > 0 ? '繼續' : '開始');
+  $('pomoCount').textContent = `今天完成 ${pomoCount()} 個`;
+  document.title = pomo.end ? `${$('pomoTime').textContent} · 番茄鐘` : '我的儀表板';
+}
+function beep(){
+  try{
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    [0, .35, .7].forEach(t => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 880; o.connect(g); g.connect(ac.destination);
+      g.gain.setValueAtTime(.2, ac.currentTime + t); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + t + .3); o.start(ac.currentTime + t); o.stop(ac.currentTime + t + .3); });
+  }catch{}
+}
+function pomoTick(){
+  if(!pomo.end) return;
+  pomo.left = (pomo.end - Date.now()) / 1000;
+  if(pomo.left <= 0){
+    pomo.end = null; pomo.left = 0; beep();
+    if(pomo.mins === 25) store.set('pomo', { day: new Date().toDateString(), n: pomoCount() + 1 });
+  }
+  pomoRender();
+}
+$('pomoStart').onclick = () => {
+  if(pomo.end){ pomo.left = (pomo.end - Date.now()) / 1000; pomo.end = null; }
+  else { if(pomo.left <= 0) pomo.left = pomo.mins * 60; pomo.end = Date.now() + pomo.left * 1000; }
+  pomoRender();
+};
+$('pomoReset').onclick = () => { pomo.end = null; pomo.left = pomo.mins * 60; pomoRender(); };
+$('pomoModes').querySelectorAll('button').forEach(b => b.onclick = () => {
+  $('pomoModes').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  pomo = { mins: +b.dataset.m, left: +b.dataset.m * 60, end: null }; pomoRender();
+});
+pomoRender();
+
+/* ---------- 地圖（Google Maps iframe，免 key） ----------
+   程式控制：setMap({ q: '台北101', z: 16 })
+     q：地址、地名，或經緯度字串 '25.0339,121.5645'
+     z：縮放等級 1（全球）～ 21（建築物）
+   也可以在瀏覽器 Console 直接呼叫 setMap(...)。 */
+const mapUrl = (q, z) => `https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=${z}&hl=zh-TW&output=embed`;
+let mapState = store.get('map', null) || { q: `${loc.lat},${loc.lon}`, z: 14 };
+function setMap({ q, z } = {}){
+  if(q != null && String(q).trim()) mapState.q = String(q).trim();
+  if(z != null && !isNaN(z)) mapState.z = Math.max(1, Math.min(21, Math.round(+z)));
+  store.set('map', mapState);
+  const url = mapUrl(mapState.q, mapState.z), fr = $('mapFrame');
+  if(fr.src !== url) fr.src = url;
+  $('mapQ').value = mapState.q; $('mapZ').value = mapState.z; $('mapZv').textContent = mapState.z;
+  $('mapNow').textContent = `目前顯示：${mapState.q}・縮放 ${mapState.z}`;
+}
+window.setMap = setMap;
+function followLoc(){ setMap({ q: `${loc.lat},${loc.lon}` }); } // 天氣城市變更時，地圖跟著移動
+$('mapForm').onsubmit = e => { e.preventDefault(); setMap({ q: $('mapQ').value }); };
+$('mapZ').oninput = () => { $('mapZv').textContent = $('mapZ').value; };
+$('mapZ').onchange = () => setMap({ z: $('mapZ').value });      // 放開滑桿才重新載入地圖
+$('zIn').onclick = () => setMap({ z: mapState.z + 1 });
+$('zOut').onclick = () => setMap({ z: mapState.z - 1 });
+$('mapSync').onclick = followLoc;
+setMap();
+
+/* ---------- 啟動 & 定時更新 ---------- */
+tick(); setInterval(tick, 1000);
+loadWeather(); loadHolidays(); loadFx(); loadCrypto(); loadQuakes(); loadHN(); loadWiki();
+window._booted = true;
+setInterval(loadWeather, 15 * 60e3);
+setInterval(loadCrypto, 60e3);
+setInterval(loadFx, 60 * 60e3);
+setInterval(loadQuakes, 5 * 60e3);
+setInterval(loadHN, 10 * 60e3);
+setInterval(loadWiki, 60 * 60e3);
+</script>
+</body>
+</html>
